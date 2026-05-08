@@ -328,7 +328,7 @@ document.getElementById("search").addEventListener("input", e => {
     applyFilters();
 });
 
-// auto refresh
+// auto refresh 
 // setInterval(loadDocs, 60000);
 
 // start
