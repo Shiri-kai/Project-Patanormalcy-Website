@@ -2,10 +2,11 @@ const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-Wpsuef1T_F
 
 let documents = [];
 
-// 🔥 GLOBAL FILTER STATE
+// GLOBAL FILTER STATE
 let activeTag = null;
 let activeCategory = null;
 let searchQuery = "";
+let expandedCategories = new Set();
 
 // ================= LOAD =================
 async function loadDocs() {
