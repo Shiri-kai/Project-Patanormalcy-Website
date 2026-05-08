@@ -2,10 +2,12 @@ const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-Wpsuef1T_F
 
 let documents = [];
 
-// GLOBAL FILTER STATE
+// GLOBAL STATE
 let activeTag = null;
 let activeCategory = null;
 let searchQuery = "";
+
+// Persistent expand state
 let expandedCategories = new Set();
 
 // ================= LOAD =================
@@ -37,7 +39,7 @@ async function loadDocs() {
         applyFilters();
 
     } catch (err) {
-        console.error(err);
+        console.error("LOAD ERROR:", err);
         document.getElementById("results").innerHTML = "Failed to load data.";
     }
 }
@@ -46,7 +48,6 @@ async function loadDocs() {
 function applyFilters() {
     let filtered = documents;
 
-    // SEARCH
     if (searchQuery) {
         const q = searchQuery.toLowerCase();
 
@@ -64,12 +65,10 @@ function applyFilters() {
             .map(x => x.doc);
     }
 
-    // TAG
     if (activeTag) {
         filtered = filtered.filter(d => d.tags.includes(activeTag));
     }
 
-    // CATEGORY (supports nesting)
     if (activeCategory) {
         filtered = filtered.filter(d =>
             d.category.startsWith(activeCategory)
@@ -115,17 +114,17 @@ function renderNav(docs) {
 
             const wrapper = document.createElement("div");
 
-            // header row
+            // HEADER
             const header = document.createElement("div");
             header.style.display = "flex";
             header.style.alignItems = "center";
             header.style.cursor = "pointer";
 
-            // toggle icon
+            // TOGGLE ICON
             const toggle = document.createElement("span");
             toggle.style.marginRight = "6px";
 
-            // label
+            // LABEL
             const label = document.createElement("span");
             label.textContent = key;
 
@@ -137,7 +136,7 @@ function renderNav(docs) {
             header.appendChild(label);
             wrapper.appendChild(header);
 
-            // child container
+            // CHILD CONTAINER
             const child = document.createElement("div");
             child.className = "category";
 
@@ -147,10 +146,23 @@ function renderNav(docs) {
 
             wrapper.appendChild(child);
 
-            // render children
+            // Toggle logic
+            header.onclick = (e) => {
+                e.stopPropagation();
+
+                if (expandedCategories.has(fullPath)) {
+                    expandedCategories.delete(fullPath);
+                } else {
+                    expandedCategories.add(fullPath);
+                }
+
+                renderNav(documents);
+            };
+
+            // CHILDREN
             renderNode(node[key], child, fullPath);
 
-            // render docs
+            // DOC LINKS
             if (node[key]._docs) {
                 node[key]._docs.forEach(doc => {
                     const link = document.createElement("div");
@@ -253,7 +265,6 @@ function renderBreadcrumb() {
 
     container.innerHTML = "";
 
-    // HOME
     const home = document.createElement("span");
     home.textContent = "Home";
     home.style.cursor = "pointer";
@@ -264,7 +275,6 @@ function renderBreadcrumb() {
     };
     container.appendChild(home);
 
-    // CATEGORY PATH
     if (activeCategory) {
         const parts = activeCategory.split("/");
 
@@ -288,7 +298,6 @@ function renderBreadcrumb() {
         });
     }
 
-    // TAG
     if (activeTag) {
         container.append(" > ");
 
@@ -304,7 +313,6 @@ function renderBreadcrumb() {
         container.appendChild(tag);
     }
 
-    // RESET BUTTON
     const btn = document.createElement("button");
     btn.textContent = "Reset";
     btn.style.marginLeft = "10px";
@@ -328,8 +336,5 @@ document.getElementById("search").addEventListener("input", e => {
     applyFilters();
 });
 
-// auto refresh 
-// setInterval(loadDocs, 60000);
-
-// start
+// START
 loadDocs();
