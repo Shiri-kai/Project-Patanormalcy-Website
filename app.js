@@ -197,7 +197,8 @@ function applyFilters() {
         filtered = filtered.filter(d => d.tags.includes(activeTag));
     }
 
-    renderAll(filtered);
+    renderNav(documents);
+    renderResults(filtered);
 }
 
 document.getElementById("search").addEventListener("input", applyFilters);
