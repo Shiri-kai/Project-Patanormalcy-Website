@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SCP Archive</title>
 
     <style>
@@ -11,22 +12,29 @@
             display: flex;
             background: #0f1115;
             color: #e6e6e6;
-            font-family: Arial;
+            font-family: Arial, sans-serif;
         }
 
+        /* Sidebar */
         aside {
             width: 300px;
             height: 100vh;
             overflow-y: auto;
             background: #171a21;
             padding: 15px;
+            box-sizing: border-box;
+            border-right: 1px solid #2a2f3a;
         }
 
+        /* Main content */
         main {
             flex: 1;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
 
+        /* Search */
         input {
             width: 100%;
             padding: 10px;
@@ -34,66 +42,133 @@
             border: none;
             color: white;
             margin-bottom: 10px;
+            border-radius: 6px;
         }
 
+        /* Breadcrumb */
+        #breadcrumb {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        /* Viewer */
+        #viewer {
+            background: #171a21;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #2a2f3a;
+        }
+
+        /* Results list */
+        #results {
+            background: #171a21;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #2a2f3a;
+            overflow-y: auto;
+            max-height: 40vh;
+        }
+
+        /* Category indentation */
         .category {
-            margin-left: 10px;
+            margin-left: 15px;
         }
 
+        /* Sidebar links */
         .doc-link {
             cursor: pointer;
             padding: 5px;
             border-radius: 5px;
+            font-size: 14px;
         }
 
         .doc-link:hover {
             background: #2a2f3a;
         }
 
+        /* Cards */
+        .doc-card {
+            background: #1b1f27;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .doc-card:hover {
+            background: #242a36;
+        }
+
+        /* Tags */
         .tag {
             background: #2b3342;
             padding: 4px 8px;
-            margin: 3px;
+            margin: 3px 3px 0 0;
             display: inline-block;
             border-radius: 999px;
             cursor: pointer;
+            font-size: 12px;
         }
 
         .tag:hover {
             background: #3a4455;
         }
 
-        .doc-card {
-            background: #171a21;
-            padding: 15px;
-            margin-bottom: 10px;
+        /* Embedded doc */
+        iframe {
+            width: 100%;
+            height: 60vh;
+            margin-top: 10px;
             border-radius: 8px;
+            border: none;
+            background: white;
+        }
+
+        /* Buttons */
+        button {
+            background: #2b3342;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
             cursor: pointer;
         }
 
-        iframe {
-            width: 100%;
-            height: 75vh;
-            margin-top: 10px;
-            border-radius: 8px;
+        button:hover {
+            background: #3a4455;
         }
     </style>
 </head>
 
 <body>
 
+    <!-- Sidebar -->
     <aside>
         <h2>SCP Archive</h2>
         <input id="search" placeholder="Search..." />
         <div id="nav"></div>
     </aside>
 
+    <!-- Main -->
     <main>
+
+        <!-- Breadcrumb -->
+        <div id="breadcrumb"></div>
+
+        <!-- Document viewer -->
+        <div id="viewer">
+            <p>Select a document to view it here.</p>
+        </div>
+
+        <!-- Results -->
         <div id="results"></div>
-        <div id="viewer"></div>
+
     </main>
 
     <script src="app.js"></script>
+
 </body>
 
 </html>

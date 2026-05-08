@@ -112,24 +112,55 @@ function renderNav(docs) {
 
             const fullPath = path ? path + "/" + key : key;
 
-            const div = document.createElement("div");
-            div.textContent = key;
-            div.style.cursor = "pointer";
-            div.style.fontWeight = activeCategory === fullPath ? "bold" : "normal";
+            // wrapper
+            const wrapper = document.createElement("div");
 
-            div.onclick = () => {
+            // header row
+            const header = document.createElement("div");
+            header.style.display = "flex";
+            header.style.alignItems = "center";
+            header.style.cursor = "pointer";
+
+            // collapse toggle
+            const toggle = document.createElement("span");
+            toggle.textContent = "▶";
+            toggle.style.marginRight = "6px";
+
+            // category label
+            const label = document.createElement("span");
+            label.textContent = key;
+            label.style.fontWeight = activeCategory === fullPath ? "bold" : "normal";
+
+            header.appendChild(toggle);
+            header.appendChild(label);
+
+            wrapper.appendChild(header);
+
+            // child container
+            const child = document.createElement("div");
+            child.className = "category";
+            child.style.display = "none"; // collapsed by default
+            wrapper.appendChild(child);
+
+            // toggle expand
+            toggle.onclick = (e) => {
+                e.stopPropagation();
+                const open = child.style.display === "block";
+                child.style.display = open ? "none" : "block";
+                toggle.textContent = open ? "▶" : "▼";
+            };
+
+            // click category (filter)
+            label.onclick = (e) => {
+                e.stopPropagation();
                 activeCategory = fullPath;
                 applyFilters();
             };
 
-            container.appendChild(div);
-
-            const child = document.createElement("div");
-            child.className = "category";
-            container.appendChild(child);
-
+            // render children
             renderNode(node[key], child, fullPath);
 
+            // render docs
             if (node[key]._docs) {
                 node[key]._docs.forEach(doc => {
                     const link = document.createElement("div");
@@ -139,6 +170,8 @@ function renderNav(docs) {
                     child.appendChild(link);
                 });
             }
+
+            container.appendChild(wrapper);
         });
     }
 
