@@ -146,26 +146,6 @@ function renderNav(docs) {
 
             wrapper.appendChild(child);
 
-            // toggle expand/collapse
-            toggle.onclick = (e) => {
-                e.stopPropagation();
-
-                if (expandedCategories.has(fullPath)) {
-                    expandedCategories.delete(fullPath);
-                } else {
-                    expandedCategories.add(fullPath);
-                }
-
-                renderNav(documents); // re-render but preserve state
-            };
-
-            // click category (filter)
-            label.onclick = (e) => {
-                e.stopPropagation();
-                activeCategory = fullPath;
-                applyFilters();
-            };
-
             // render children
             renderNode(node[key], child, fullPath);
 
@@ -238,9 +218,6 @@ function openDoc(doc) {
     document.querySelectorAll(".related").forEach((el, i) => {
         el.onclick = () => openDoc(related[i]);
     });
-
-    // scroll to top so viewer is visible
-    window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function closeDoc() {
@@ -273,21 +250,66 @@ function renderBreadcrumb() {
         document.querySelector("main").prepend(container);
     }
 
-    let text = "Home";
+    container.innerHTML = "";
 
+    // HOME
+    const home = document.createElement("span");
+    home.textContent = "Home";
+    home.style.cursor = "pointer";
+    home.onclick = () => {
+        activeCategory = null;
+        activeTag = null;
+        applyFilters();
+    };
+    container.appendChild(home);
+
+    // CATEGORY PATH
     if (activeCategory) {
         const parts = activeCategory.split("/");
-        text += " > " + parts.join(" > ");
+
+        let path = "";
+
+        parts.forEach(part => {
+            container.append(" > ");
+
+            path = path ? path + "/" + part : part;
+
+            const el = document.createElement("span");
+            el.textContent = part;
+            el.style.cursor = "pointer";
+
+            el.onclick = () => {
+                activeCategory = path;
+                applyFilters();
+            };
+
+            container.appendChild(el);
+        });
     }
 
+    // TAG
     if (activeTag) {
-        text += " > Tag: " + activeTag;
+        container.append(" > ");
+
+        const tag = document.createElement("span");
+        tag.textContent = "Tag: " + activeTag;
+        tag.style.cursor = "pointer";
+
+        tag.onclick = () => {
+            activeTag = null;
+            applyFilters();
+        };
+
+        container.appendChild(tag);
     }
 
-    container.innerHTML = `
-        ${text}
-        <button onclick="clearFilters()" style="margin-left:10px;">Reset</button>
-    `;
+    // RESET BUTTON
+    const btn = document.createElement("button");
+    btn.textContent = "Reset";
+    btn.style.marginLeft = "10px";
+    btn.onclick = clearFilters;
+
+    container.appendChild(btn);
 }
 
 // ================= RESET =================
