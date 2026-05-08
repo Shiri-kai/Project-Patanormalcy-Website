@@ -112,7 +112,6 @@ function renderNav(docs) {
 
             const fullPath = path ? path + "/" + key : key;
 
-            // wrapper
             const wrapper = document.createElement("div");
 
             // header row
@@ -121,33 +120,43 @@ function renderNav(docs) {
             header.style.alignItems = "center";
             header.style.cursor = "pointer";
 
-            // collapse toggle
+            // toggle icon
             const toggle = document.createElement("span");
-            toggle.textContent = "▶";
             toggle.style.marginRight = "6px";
 
-            // category label
+            // label
             const label = document.createElement("span");
             label.textContent = key;
-            label.style.fontWeight = activeCategory === fullPath ? "bold" : "normal";
+
+            if (activeCategory === fullPath) {
+                label.style.fontWeight = "bold";
+            }
 
             header.appendChild(toggle);
             header.appendChild(label);
-
             wrapper.appendChild(header);
 
             // child container
             const child = document.createElement("div");
             child.className = "category";
-            child.style.display = "none"; // collapsed by default
+
+            const isOpen = expandedCategories.has(fullPath);
+            child.style.display = isOpen ? "block" : "none";
+            toggle.textContent = isOpen ? "▼" : "▶";
+
             wrapper.appendChild(child);
 
-            // toggle expand
+            // toggle expand/collapse
             toggle.onclick = (e) => {
                 e.stopPropagation();
-                const open = child.style.display === "block";
-                child.style.display = open ? "none" : "block";
-                toggle.textContent = open ? "▶" : "▼";
+
+                if (expandedCategories.has(fullPath)) {
+                    expandedCategories.delete(fullPath);
+                } else {
+                    expandedCategories.add(fullPath);
+                }
+
+                renderNav(documents); // re-render but preserve state
             };
 
             // click category (filter)
@@ -212,9 +221,14 @@ function openDoc(doc) {
     const related = findRelated(doc);
 
     document.getElementById("viewer").innerHTML = `
-        <h2>${doc.title}</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>${doc.title}</h2>
+            <button onclick="closeDoc()">✖ Close</button>
+        </div>
+
         <p>${doc.description || ""}</p>
         ${doc.tags.map(t => `<span class="tag">${t}</span>`).join("")}
+
         <iframe src="${doc.url}"></iframe>
 
         <h3>Related Documents</h3>
@@ -224,6 +238,15 @@ function openDoc(doc) {
     document.querySelectorAll(".related").forEach((el, i) => {
         el.onclick = () => openDoc(related[i]);
     });
+
+    // scroll to top so viewer is visible
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function closeDoc() {
+    document.getElementById("viewer").innerHTML = `
+        <p>Select a document to view it here.</p>
+    `;
 }
 
 // ================= RELATED =================
@@ -283,7 +306,7 @@ document.getElementById("search").addEventListener("input", e => {
 });
 
 // auto refresh
-setInterval(loadDocs, 60000);
+// setInterval(loadDocs, 60000);
 
 // start
 loadDocs();
