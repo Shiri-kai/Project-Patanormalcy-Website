@@ -1,4 +1,4 @@
-const SHEET_URL = "YOUR_CSV_LINK_HERE";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/1s9u8FzL_0g9XCOiWS7Swl-s3A4psghFwpOexhxBzWFc/edit?usp=sharing";
 
 let documents = [];
 let activeTag = null;
