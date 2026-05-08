@@ -1,21 +1,22 @@
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-Wpsuef1T_Furukaxfg6eQZRk4jeGMk4TCoYCgrJ7ONWo7Xa5IZ3zLO64jIE3pzt4rn-hySxqsvkY/pub?output=csv&single=true";
 
 let documents = [];
-let activeTag = null;
 
+// 🔥 GLOBAL FILTER STATE
+let activeTag = null;
+let activeCategory = null;
+let searchQuery = "";
+
+// ================= LOAD =================
 async function loadDocs() {
     try {
-        document.getElementById("results").innerHTML = "<p>Loading documents...</p>";
-
         const res = await fetch(SHEET_URL + "&t=" + Date.now());
         const text = await res.text();
-
-        console.log("RAW CSV:", text);
 
         const rows = text
             .split("\n")
             .slice(1)
-            .filter(r => r.trim()); // remove empty rows
+            .filter(r => r.trim());
 
         documents = rows.map(r => {
             const c = r.split(",");
@@ -29,39 +30,62 @@ async function loadDocs() {
                 status: (c[5] || "active").trim().toLowerCase()
             };
         })
-            // remove broken rows
             .filter(d => d.title && d.category && d.url)
-            // only show active
             .filter(d => d.status === "active");
 
-        console.log("PARSED DOCS:", documents);
-
-        if (documents.length === 0) {
-            document.getElementById("results").innerHTML = "<p>No documents found.</p>";
-            return;
-        }
-
-        renderAll(documents);
+        applyFilters();
 
     } catch (err) {
-        console.error("LOAD ERROR:", err);
-        document.getElementById("results").innerHTML = "<p style='color:red;'>Failed to load data.</p>";
+        console.error(err);
+        document.getElementById("results").innerHTML = "Failed to load data.";
     }
 }
 
-function renderAll(docs) {
-    renderNav(docs);
-    renderResults(docs);
+// ================= FILTERING =================
+function applyFilters() {
+    let filtered = documents;
+
+    // SEARCH
+    if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+
+        filtered = filtered.map(doc => {
+            let score = 0;
+
+            if (doc.title.toLowerCase().includes(q)) score += 5;
+            if (doc.tags.some(t => t.toLowerCase().includes(q))) score += 3;
+            if (doc.description?.toLowerCase().includes(q)) score += 1;
+
+            return { doc, score };
+        })
+            .filter(x => x.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .map(x => x.doc);
+    }
+
+    // TAG
+    if (activeTag) {
+        filtered = filtered.filter(d => d.tags.includes(activeTag));
+    }
+
+    // CATEGORY (supports nesting)
+    if (activeCategory) {
+        filtered = filtered.filter(d =>
+            d.category.startsWith(activeCategory)
+        );
+    }
+
+    renderNav(documents);
+    renderResults(filtered);
+    renderBreadcrumb();
 }
 
+// ================= NAV =================
 function groupNested(docs) {
     const tree = {};
 
     docs.forEach(doc => {
-        if (!doc.category) return;
-
         const parts = doc.category.split("/");
-
         let current = tree;
 
         parts.forEach(part => {
@@ -82,20 +106,29 @@ function renderNav(docs) {
 
     const tree = groupNested(docs);
 
-    function renderNode(node, container) {
+    function renderNode(node, container, path = "") {
         Object.keys(node).forEach(key => {
             if (key === "_docs") return;
 
+            const fullPath = path ? path + "/" + key : key;
+
             const div = document.createElement("div");
             div.textContent = key;
-            div.style.fontWeight = "bold";
+            div.style.cursor = "pointer";
+            div.style.fontWeight = activeCategory === fullPath ? "bold" : "normal";
+
+            div.onclick = () => {
+                activeCategory = fullPath;
+                applyFilters();
+            };
+
             container.appendChild(div);
 
             const child = document.createElement("div");
             child.className = "category";
             container.appendChild(child);
 
-            renderNode(node[key], child);
+            renderNode(node[key], child, fullPath);
 
             if (node[key]._docs) {
                 node[key]._docs.forEach(doc => {
@@ -112,6 +145,7 @@ function renderNav(docs) {
     renderNode(tree, nav);
 }
 
+// ================= RESULTS =================
 function renderResults(docs) {
     const results = document.getElementById("results");
     results.innerHTML = "";
@@ -128,7 +162,6 @@ function renderResults(docs) {
 
         div.onclick = () => openDoc(doc);
 
-        // tag click
         div.querySelectorAll(".tag").forEach(tagEl => {
             tagEl.onclick = (e) => {
                 e.stopPropagation();
@@ -141,9 +174,8 @@ function renderResults(docs) {
     });
 }
 
+// ================= DOCUMENT VIEW =================
 function openDoc(doc) {
-    document.getElementById("results").innerHTML = "";
-
     const related = findRelated(doc);
 
     document.getElementById("viewer").innerHTML = `
@@ -151,6 +183,7 @@ function openDoc(doc) {
         <p>${doc.description || ""}</p>
         ${doc.tags.map(t => `<span class="tag">${t}</span>`).join("")}
         <iframe src="${doc.url}"></iframe>
+
         <h3>Related Documents</h3>
         ${related.map(r => `<div class="doc-link related">${r.title}</div>`).join("")}
     `;
@@ -160,6 +193,7 @@ function openDoc(doc) {
     });
 }
 
+// ================= RELATED =================
 function findRelated(doc) {
     return documents
         .filter(d => d !== doc)
@@ -173,38 +207,50 @@ function findRelated(doc) {
         .map(x => x.doc);
 }
 
-function applyFilters() {
-    let filtered = documents;
+// ================= BREADCRUMB =================
+function renderBreadcrumb() {
+    let container = document.getElementById("breadcrumb");
 
-    const q = document.getElementById("search").value.toLowerCase();
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "breadcrumb";
+        document.querySelector("main").prepend(container);
+    }
 
-    if (q) {
-        filtered = filtered.map(doc => {
-            let score = 0;
+    let text = "Home";
 
-            if (doc.title.toLowerCase().includes(q)) score += 5;
-            if (doc.tags.some(t => t.toLowerCase().includes(q))) score += 3;
-            if (doc.description?.toLowerCase().includes(q)) score += 1;
-
-            return { doc, score };
-        })
-            .filter(x => x.score > 0)
-            .sort((a, b) => b.score - a.score)
-            .map(x => x.doc);
+    if (activeCategory) {
+        const parts = activeCategory.split("/");
+        text += " > " + parts.join(" > ");
     }
 
     if (activeTag) {
-        filtered = filtered.filter(d => d.tags.includes(activeTag));
+        text += " > Tag: " + activeTag;
     }
 
-    renderNav(documents);
-    renderResults(filtered);
+    container.innerHTML = `
+        ${text}
+        <button onclick="clearFilters()" style="margin-left:10px;">Reset</button>
+    `;
 }
 
-document.getElementById("search").addEventListener("input", applyFilters);
+// ================= RESET =================
+function clearFilters() {
+    activeTag = null;
+    activeCategory = null;
+    searchQuery = "";
+    document.getElementById("search").value = "";
+    applyFilters();
+}
 
-// auto refresh every minute
+// ================= EVENTS =================
+document.getElementById("search").addEventListener("input", e => {
+    searchQuery = e.target.value;
+    applyFilters();
+});
+
+// auto refresh
 setInterval(loadDocs, 60000);
 
-// initial load
+// start
 loadDocs();
