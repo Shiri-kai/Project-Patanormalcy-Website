@@ -4,25 +4,49 @@ let documents = [];
 let activeTag = null;
 
 async function loadDocs() {
-    const res = await fetch(SHEET_URL + "&t=" + Date.now());
-    const text = await res.text();
+    try {
+        document.getElementById("results").innerHTML = "<p>Loading documents...</p>";
 
-    const rows = text.split("\n").slice(1);
+        const res = await fetch(SHEET_URL + "&t=" + Date.now());
+        const text = await res.text();
 
-    documents = rows.map(r => {
-        const c = r.split(",");
+        console.log("RAW CSV:", text);
 
-        return {
-            title: c[0],
-            category: c[1],
-            tags: c[2] ? c[2].split(";").map(t => t.trim()) : [],
-            description: c[3],
-            url: c[4],
-            status: c[5] || "active"
-        };
-    }).filter(d => d.status === "active");
+        const rows = text
+            .split("\n")
+            .slice(1)
+            .filter(r => r.trim()); // remove empty rows
 
-    renderAll(documents);
+        documents = rows.map(r => {
+            const c = r.split(",");
+
+            return {
+                title: c[0]?.trim(),
+                category: c[1]?.trim(),
+                tags: c[2] ? c[2].split(";").map(t => t.trim()) : [],
+                description: c[3]?.trim(),
+                url: c[4]?.trim(),
+                status: (c[5] || "active").trim().toLowerCase()
+            };
+        })
+            // remove broken rows
+            .filter(d => d.title && d.category && d.url)
+            // only show active
+            .filter(d => d.status === "active");
+
+        console.log("PARSED DOCS:", documents);
+
+        if (documents.length === 0) {
+            document.getElementById("results").innerHTML = "<p>No documents found.</p>";
+            return;
+        }
+
+        renderAll(documents);
+
+    } catch (err) {
+        console.error("LOAD ERROR:", err);
+        document.getElementById("results").innerHTML = "<p style='color:red;'>Failed to load data.</p>";
+    }
 }
 
 function renderAll(docs) {
@@ -34,6 +58,8 @@ function groupNested(docs) {
     const tree = {};
 
     docs.forEach(doc => {
+        if (!doc.category) return;
+
         const parts = doc.category.split("/");
 
         let current = tree;
@@ -62,6 +88,7 @@ function renderNav(docs) {
 
             const div = document.createElement("div");
             div.textContent = key;
+            div.style.fontWeight = "bold";
             container.appendChild(div);
 
             const child = document.createElement("div");
@@ -94,13 +121,14 @@ function renderResults(docs) {
         div.className = "doc-card";
 
         div.innerHTML = `
-      <h3>${doc.title}</h3>
-      <p>${doc.description}</p>
-      ${doc.tags.map(t => `<span class="tag">${t}</span>`).join("")}
-    `;
+            <h3>${doc.title}</h3>
+            <p>${doc.description || ""}</p>
+            ${doc.tags.map(t => `<span class="tag">${t}</span>`).join("")}
+        `;
 
         div.onclick = () => openDoc(doc);
 
+        // tag click
         div.querySelectorAll(".tag").forEach(tagEl => {
             tagEl.onclick = (e) => {
                 e.stopPropagation();
@@ -119,16 +147,16 @@ function openDoc(doc) {
     const related = findRelated(doc);
 
     document.getElementById("viewer").innerHTML = `
-    <h2>${doc.title}</h2>
-    <p>${doc.description}</p>
-    ${doc.tags.map(t => `<span class="tag">${t}</span>`).join("")}
-    <iframe src="${doc.url}"></iframe>
-    <h3>Related Documents</h3>
-    ${related.map(r => `<div class="doc-link">${r.title}</div>`).join("")}
-  `;
+        <h2>${doc.title}</h2>
+        <p>${doc.description || ""}</p>
+        ${doc.tags.map(t => `<span class="tag">${t}</span>`).join("")}
+        <iframe src="${doc.url}"></iframe>
+        <h3>Related Documents</h3>
+        ${related.map(r => `<div class="doc-link related">${r.title}</div>`).join("")}
+    `;
 
-    document.querySelectorAll(".doc-link").forEach((el, i) => {
-        if (related[i]) el.onclick = () => openDoc(related[i]);
+    document.querySelectorAll(".related").forEach((el, i) => {
+        el.onclick = () => openDoc(related[i]);
     });
 }
 
@@ -156,7 +184,7 @@ function applyFilters() {
 
             if (doc.title.toLowerCase().includes(q)) score += 5;
             if (doc.tags.some(t => t.toLowerCase().includes(q))) score += 3;
-            if (doc.description.toLowerCase().includes(q)) score += 1;
+            if (doc.description?.toLowerCase().includes(q)) score += 1;
 
             return { doc, score };
         })
@@ -177,4 +205,5 @@ document.getElementById("search").addEventListener("input", applyFilters);
 // auto refresh every minute
 setInterval(loadDocs, 60000);
 
+// initial load
 loadDocs();
